@@ -1,5 +1,9 @@
+"use client"
 import Image from "next/image"
 import Link from "next/link"
+import {useState, useTransition} from "react";
+import {toggleBookmark} from "@/lib/actions/companion.actions";
+
 
 
 interface CompanionCardProps{
@@ -9,22 +13,52 @@ interface CompanionCardProps{
     subject: string;
     duration: number;
     color: string;
+    is_bookmarked: boolean;
+    onToggleBookmark?: () => void;
 }
 
 
-const CompanionCard = ({id , name,topic, subject, duration, color }: CompanionCardProps
+const CompanionCard = ({id , name,topic, subject, duration, color, is_bookmarked,onToggleBookmark }: CompanionCardProps
 )=> {
+    const [bookmarked, setBookmarked] = useState(is_bookmarked)
+    const [isPending, startTransition] = useTransition()
+
+    const handleBookmarkToggle = () => {
+        const newValue = !bookmarked;
+        setBookmarked(newValue);
+
+        startTransition(async () => {
+            const result = await toggleBookmark(id, newValue);
+
+            if (!result.success) {
+                setBookmarked(!newValue);
+                console.error("Error updating bookmark:", result.error);
+            } else if (onToggleBookmark) {
+                onToggleBookmark();
+            }
+        });
+    }
+
     return (
         <article className="companion-card" style={{backgroundColor: color}}>
             <div className="flex justify-between items-center">
                 <div className="subject-badge">{subject}</div>
-                <button className="companion-bookmark">
-                    <Image src="icons/bookmark.svg"
-                           alt="bookmark"
-                           width={12.5}
-                           height={15}
+                <button
+                    onClick={handleBookmarkToggle}
+                    disabled={isPending}
+                    aria-label={bookmarked ? "Remove bookmark" : "Add bookmark"}
+                    className="companion-bookmark p-1 rounded-md hover:bg-gray-200"
+                >
+                    <Image
+                        src={
+                            bookmarked
+                                ? "/icons/bookmark-filled.svg" // highlight when active
+                                : "/icons/bookmark.svg"
+                        }
+                        alt="bookmark"
+                        width={14}
+                        height={16}
                     />
-
                 </button>
             </div>
             <h2 className="text-2xl font-bold">{name}</h2>
